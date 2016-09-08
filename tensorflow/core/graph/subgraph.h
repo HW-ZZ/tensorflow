@@ -30,7 +30,7 @@ namespace subgraph {
 // outputs, fetching node outputs, and only running a subset of the
 // graph.  "fed_outputs" and "fetch_outputs" are both lists of
 // output tensor identifiers in the form of
-// "<name>[:<optional_output_index>]", and "target_nodes_str" is a
+// "<name>[:<optional_output_index>]", and "target_nodes_names" is a
 // lists of target node names in "*g" "g".
 //
 // In the resulting graph "*g", output edges in "fed_outputs" have
