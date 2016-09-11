@@ -2,6 +2,11 @@
 
 DO_NOT_SUBMIT_WARNING="Unofficial setting. DO NOT SUBMIT!!!"
 
+# Find out the absolute path to where ./configure resides
+pushd `dirname $0` #> /dev/null
+SOURCE_BASE_DIR=`pwd -P`
+popd > /dev/null
+
 ## Set up python-related environment settings
 while true; do
   fromuser=""
@@ -68,6 +73,12 @@ echo "$SWIG_PATH" > tensorflow/tools/swig/swig_path
 # Invoke python_config and set up symlinks to python includes
 (./util/python/python_config.sh --setup "$PYTHON_BIN_PATH";) || exit -1
 
+# Run the gen_git_source to create links where bazel can track dependencies for
+# git hash propagation
+GEN_GIT_SOURCE=tensorflow/tools/git/gen_git_source.py
+chmod a+x ${GEN_GIT_SOURCE}
+${PYTHON_BIN_PATH} ${GEN_GIT_SOURCE} --configure ${SOURCE_BASE_DIR}
+
 ## Set up Cuda-related environment settings
 
 while [ "$TF_NEED_CUDA" == "" ]; do
@@ -98,7 +109,7 @@ while true; do
     fi
   fi
   if [ -e "$GCC_HOST_COMPILER_PATH" ]; then
-    export CC=$GCC_HOST_COMPILER_PATH
+    export GCC_HOST_COMPILER_PATH
     break
   fi
   echo "Invalid gcc path. ${GCC_HOST_COMPILER_PATH} cannot be found" 1>&2
@@ -142,7 +153,7 @@ while true; do
 
   if [ -e "${CUDA_TOOLKIT_PATH}/${CUDA_RT_LIB_PATH}" ]; then
     export CUDA_TOOLKIT_PATH
-    export CUDA_VERSION=$TF_CUDA_VERSION
+    export TF_CUDA_VERSION
     break
   fi
   echo "Invalid path to CUDA $TF_CUDA_VERSION toolkit. ${CUDA_TOOLKIT_PATH}/${CUDA_RT_LIB_PATH} cannot be found"
@@ -203,7 +214,7 @@ while true; do
   fi
 
   if [ -e "$CUDNN_INSTALL_PATH/${CUDA_DNN_LIB_ALT_PATH}" -o -e "$CUDNN_INSTALL_PATH/${CUDA_DNN_LIB_PATH}" ]; then
-    export CUDNN_VERSION=$TF_CUDNN_VERSION
+    export TF_CUDNN_VERSION
     export CUDNN_INSTALL_PATH
     break
   fi
@@ -211,7 +222,7 @@ while true; do
   if [ "$OSNAME" == "Linux" ]; then
     CUDNN_PATH_FROM_LDCONFIG="$(ldconfig -p | sed -n 's/.*libcudnn.so .* => \(.*\)/\1/p')"
     if [ -e "${CUDNN_PATH_FROM_LDCONFIG}${TF_CUDNN_EXT}" ]; then
-      export CUDNN_VERSION=$TF_CUDNN_VERSION
+      export TF_CUDNN_VERSION
       export CUDNN_INSTALL_PATH="$(dirname ${CUDNN_PATH_FROM_LDCONFIG})"
       break
     fi
@@ -263,7 +274,7 @@ EOF
       exit 1
     fi
   else
-    export CUDA_COMPUTE_CAPABILITIES=$TF_CUDA_COMPUTE_CAPABILITIES
+    export TF_CUDA_COMPUTE_CAPABILITIES
     break
   fi
   TF_CUDA_COMPUTE_CAPABILITIES=""

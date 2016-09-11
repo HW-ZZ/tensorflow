@@ -30,7 +30,8 @@ limitations under the License.
 #include "tensorflow/core/platform/test.h"
 
 #ifdef USE_HEXAGON_LIBS
-#include "gemm_wrapper.h"
+#include "tensorflow/core/platform/hexagon/gemm_wrapper.h"
+#include "tensorflow/core/platform/profile_utils/cpu_utils.h"
 #endif
 
 namespace tensorflow {
@@ -39,13 +40,39 @@ class QuantizedMatMulOpForHexagonTest : public OpsTestBase {
  protected:
   void SetUp() final {
 #ifdef USE_HEXAGON_LIBS
-    LOG(INFO) << "Hexagon libs are linked (version = "
-              << hexagon_gemm_wrapper_GetVersion() << ")";
+    LOG(INFO) << "Hexagon libs are linked (wrapper version = "
+              << hexagon_gemm_wrapper_GetWrapperVersion()
+              << ", hexagon binary version = "
+              << hexagon_gemm_wrapper_GetHexagonBinaryVersion() << ")";
 #else
     LOG(WARNING) << "Hexagon libs are not linked.";
 #endif
   }
 };
+
+// Shows some statistics of hexagon dsp using hexagon specific APIs
+#ifdef USE_HEXAGON_LIBS
+TEST_F(QuantizedMatMulOpForHexagonTest, EvaluateSharedLibOverhead) {
+  const uint64 overhead_shared_lib_start =
+      profile_utils::CpuUtils::GetCurrentClockCycle();
+  const int wrapper_version = hexagon_gemm_wrapper_GetWrapperVersion();
+  const uint64 overhead_shared_lib_end =
+      profile_utils::CpuUtils::GetCurrentClockCycle();
+  const uint64 overhead_hexagon_rpc_start =
+      profile_utils::CpuUtils::GetCurrentClockCycle();
+  const int hexagon_binary_version =
+      hexagon_gemm_wrapper_GetHexagonBinaryVersion();
+  const uint64 overhead_hexagon_rpc_end =
+      profile_utils::CpuUtils::GetCurrentClockCycle();
+  LOG(INFO) << "Shared lib (ver = " << wrapper_version << ") overhead is "
+            << (overhead_shared_lib_end - overhead_shared_lib_start)
+            << " cycles";
+  LOG(INFO) << "hexagon rpc (ver = " << hexagon_binary_version
+            << ") overhead is "
+            << (overhead_hexagon_rpc_end - overhead_hexagon_rpc_start)
+            << " cycles";
+}
+#endif
 
 // Runs two small matrices through the operator, and leaves all the parameters
 // at their default values.
